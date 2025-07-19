@@ -10,7 +10,7 @@ ws.on('open', () => {
   ws.send(JSON.stringify({
     tracking_number: "SSESEA2504249893",
     type: 'mbl',
-    
+    action: "scrape"
   }));
 });
 
