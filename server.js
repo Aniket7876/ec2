@@ -1,14 +1,14 @@
 const WebSocket = require('ws');
 
 // Connect to the laptop’s WebSocket server (replace with your ngrok URL)
-const ws = new WebSocket('wss://abc123.ngrok.io');
+const ws = new WebSocket('https://many-cows-jump.loca.lt');
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
 
   // Send a scraping command
   ws.send(JSON.stringify({
-    url: 'https://example.com',
+    url: 'http://books.toscrape.com/',
     action: 'scrape',
     selector: 'title', // Example: Scrape the page title
   }));
