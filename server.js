@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 
 // Connect to the laptop’s WebSocket server (replace with your ngrok URL)
-const ws = new WebSocket('https://shaky-women-kick.loca.lt');
+const ws = new WebSocket('https://tidy-humans-shake.loca.lt');
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
