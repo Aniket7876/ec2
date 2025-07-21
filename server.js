@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 
 // Connect to the laptop’s WebSocket server (replace with your ngrok URL)
-const ws = new WebSocket('https://five-dancers-smash.loca.lt');
+const ws = new WebSocket('https://early-games-remain.loca.lt');
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
