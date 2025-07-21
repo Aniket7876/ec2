@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 
 // Connect to the laptop’s WebSocket server (replace with your ngrok URL)
-const ws = new WebSocket('https://gentle-pumas-strive.loca.lt');
+const ws = new WebSocket('https://little-ads-jump.loca.lt');
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
@@ -18,7 +18,7 @@ ws.on('message', (data) => {
   const response = JSON.parse(data);
   if (response.status === 'success') {
     const fs = require('fs');
-    fs.writeFileSync('test.json', JSON.stringify(response.result, null, 2));
+    fs.writeFileSync('test1.json', JSON.stringify(response.result, null, 2));
     console.log('Scraped data saved to test.json');
     
   } else {
