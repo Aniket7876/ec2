@@ -2,13 +2,12 @@ const WebSocket = require('ws');
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3({ region: 'ap-south-1' });
 
-// Connect to the laptop’s WebSocket server (replace with your ngrok URL)
+// Connect to the laptop’s WebSocket server
 const ws = new WebSocket('https://many-goats-show.loca.lt');
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
 
-  // Define the scraping tasks you want to send
   const scrapingTasks = [
     {
       tracking_number: "SSESEA2504249893",
@@ -30,10 +29,8 @@ ws.on('open', () => {
       type: 'mbl',
       code: 'uwld'
     }
-    // Add as many task objects as you need
   ];
 
-  // Send a command with multiple scraping tasks
   ws.send(JSON.stringify({
     action: "scrape",
     tasks: scrapingTasks
