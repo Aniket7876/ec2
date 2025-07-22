@@ -14,6 +14,21 @@ ws.on('open', () => {
       tracking_number: "SSESEA2504249893",
       type: 'mbl',
       code: 'uwld'
+    },
+    {
+      tracking_number: "SSECLE2403203859",
+      type: 'mbl',
+      code: 'uwld'
+    },
+    {
+      tracking_number: "SSECLE2402200711",
+      type: 'mbl',
+      code: 'uwld'
+    },
+    {
+      tracking_number: "ssecle2408220777",
+      type: 'mbl',
+      code: 'uwld'
     }
     // Add as many task objects as you need
   ];
@@ -29,9 +44,10 @@ ws.on('message', (data) => {
   const response = JSON.parse(data);
 
   if (response.status === 'success') {
+    const s3Key = `${response.code.toLowerCase()}/${response.trackingNumber.toLowerCase()}.json`;
     const params = {
       Bucket: 'testbucketaniket7876',
-      Key: `${response.code}/${response.trackingNumber}.json`,
+      Key: s3Key,
       Body: JSON.stringify(response.rawData, null, 2),
       ContentType: 'application/json'
     };
@@ -40,7 +56,7 @@ ws.on('message', (data) => {
       if (err) {
         console.error('S3 upload error:', err);
       } else {
-        console.log(`Scraped data saved to s3://testbucketaniket7876/${response.code}/${response.trackingNumber}.json`);
+        console.log(`Scraped data saved to s3://testbucketaniket7876/${s3Key}`);
       }
     });
   } else {
