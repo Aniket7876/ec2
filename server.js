@@ -3,7 +3,7 @@ const AWS = require('aws-sdk');
 const s3 = new AWS.S3({ region: 'ap-south-1' });
 
 // Connect to the laptop’s WebSocket server
-const ws = new WebSocket('https://funny-views-grow.loca.lt');
+const ws = new WebSocket('https://three-rockets-taste.loca.lt');
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
@@ -12,22 +12,22 @@ ws.on('open', () => {
     {
       tracking_number: "SSESEA2504249893",
       type: 'mbl',
-      code: 'uwld'
+      code: 'UWLD'
     },
     {
       tracking_number: "SSECLE2403203859",
       type: 'mbl',
-      code: 'uwld'
+      code: 'UWLD'
     },
     {
-      tracking_number: "SSECLE2402200711",
+      tracking_number: "254851590",
       type: 'mbl',
-      code: 'uwld'
+      code: 'MAEU'
     },
     {
-      tracking_number: "ssecle2408220777",
+      tracking_number: "MRKU8203610",
       type: 'mbl',
-      code: 'uwld'
+      code: 'MAEU'
     }
   ];
 
