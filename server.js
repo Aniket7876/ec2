@@ -3,7 +3,7 @@ const AWS = require('aws-sdk');
 const s3 = new AWS.S3({ region: 'ap-south-1' });
 
 // Connect to the laptop’s WebSocket server
-const ws = new WebSocket('https://itchy-pears-invent.loca.lt');
+const ws = new WebSocket('https://salty-jeans-clean.loca.lt');
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
@@ -35,7 +35,7 @@ ws.on('open', () => {
       code: '12IH'
     },
     {
-      tracking_number: "",
+      tracking_number: "SNLFNJJL001202",
       type: 'mbl',
       code: '12IH'
     }
