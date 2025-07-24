@@ -13,11 +13,6 @@ ws.on('open', () => {
       tracking_number: "SNLFNJJL001257",
       type: 'mbl',
       code: '12IH'
-    },
-    {
-      tracking_number: "SNLFNJJL001202",
-      type: 'mbl',
-      code: '12IH'
     }
   ];
 
