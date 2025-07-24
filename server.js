@@ -28,16 +28,15 @@ ws.on('open', () => {
     const task = scrapingTasks[index];
     ws.send(JSON.stringify({
       action: "scrape",
-      tasks: [task] // send one task at a time
+      tasks: [task]
     }));
     console.log(`Sent task: ${task.tracking_number}`);
     index++;
 
-    // Schedule next task after 2 seconds
     setTimeout(sendNextTask, 2000);
   };
 
-  sendNextTask(); // Start sending
+  sendNextTask();
 });
 
 ws.on('message', (data) => {
