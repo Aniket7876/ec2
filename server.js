@@ -2,69 +2,42 @@ const WebSocket = require('ws');
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3({ region: 'ap-south-1' });
 
-// Connect to the laptop’s WebSocket server
 const ws = new WebSocket('https://significance-lucy-operations-hd.trycloudflare.com');
+
+const scrapingTasks = [
+  { tracking_number: "SSESEA2504249893", type: 'mbl', code: 'UWLD' },
+  { tracking_number: "SSECLE2403203859", type: 'mbl', code: 'UWLD' },
+  { tracking_number: "254851590", type: 'mbl', code: 'MAEU' },
+  { tracking_number: "MRKU8203610", type: 'mbl', code: 'MAEU' },
+  { tracking_number: "SNLFNJJL001257", type: 'mbl', code: '12IH' },
+  { tracking_number: "SNLFNJJL001202", type: 'mbl', code: '12IH' },
+  { tracking_number: "253450396", type: 'mbl', code: 'MAEU' },
+  { tracking_number: "254866453", type: 'mbl', code: 'MAEU' },
+  { tracking_number: "254527448", type: 'mbl', code: 'MAEU' },
+  { tracking_number: "254198838", type: 'mbl', code: 'MAEU' },
+];
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
 
-  const scrapingTasks = [
-    {
-      tracking_number: "SSESEA2504249893",
-      type: 'mbl',
-      code: 'UWLD'
-    },
-    {
-      tracking_number: "SSECLE2403203859",
-      type: 'mbl',
-      code: 'UWLD'
-    },
-    {
-      tracking_number: "254851590",
-      type: 'mbl',
-      code: 'MAEU'
-    },
-    {
-      tracking_number: "MRKU8203610",
-      type: 'mbl',
-      code: 'MAEU'
-    },
-    {
-      tracking_number: "SNLFNJJL001257",
-      type: 'mbl',
-      code: '12IH'
-    },
-    {
-      tracking_number: "SNLFNJJL001202",
-      type: 'mbl',
-      code: '12IH'
-    },
-    {
-      tracking_number: "253450396",
-      type: 'mbl',
-      code: 'MAEU'
-    },
-    {
-      tracking_number: "254866453",
-      type: 'mbl',
-      code: 'MAEU'
-    },
-    {
-      tracking_number: "254527448",
-      type: 'mbl',
-      code: 'MAEU'
-    },
-    {
-      tracking_number: "254198838",
-      type: 'mbl',
-      code: 'MAEU'
-    },
-  ];
+  let index = 0;
 
-  ws.send(JSON.stringify({
-    action: "scrape",
-    tasks: scrapingTasks
-  }));
+  const sendNextTask = () => {
+    if (index >= scrapingTasks.length) return;
+
+    const task = scrapingTasks[index];
+    ws.send(JSON.stringify({
+      action: "scrape",
+      tasks: [task] // send one task at a time
+    }));
+    console.log(`Sent task: ${task.tracking_number}`);
+    index++;
+
+    // Schedule next task after 2 seconds
+    setTimeout(sendNextTask, 2000);
+  };
+
+  sendNextTask(); // Start sending
 });
 
 ws.on('message', (data) => {
