@@ -10,26 +10,6 @@ ws.on('open', () => {
 
   const scrapingTasks = [
     {
-      tracking_number: "SSESEA2504249893",
-      type: 'mbl',
-      code: 'UWLD'
-    },
-    {
-      tracking_number: "SSECLE2403203859",
-      type: 'mbl',
-      code: 'UWLD'
-    },
-    {
-      tracking_number: "254851590",
-      type: 'mbl',
-      code: 'MAEU'
-    },
-    {
-      tracking_number: "MRKU8203610",
-      type: 'mbl',
-      code: 'MAEU'
-    },
-    {
       tracking_number: "SNLFNJJL001257",
       type: 'mbl',
       code: '12IH'
