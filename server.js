@@ -38,7 +38,27 @@ ws.on('open', () => {
       tracking_number: "SNLFNJJL001202",
       type: 'mbl',
       code: '12IH'
-    }
+    },
+    {
+      tracking_number: "253450396",
+      type: 'mbl',
+      code: 'MAEU'
+    },
+    {
+      tracking_number: "254866453",
+      type: 'mbl',
+      code: 'MAEU'
+    },
+    {
+      tracking_number: "254527448",
+      type: 'mbl',
+      code: 'MAEU'
+    },
+    {
+      tracking_number: "254198838",
+      type: 'mbl',
+      code: 'MAEU'
+    },
   ];
 
   ws.send(JSON.stringify({
