@@ -3,7 +3,7 @@ const AWS = require('aws-sdk');
 const s3 = new AWS.S3({ region: 'ap-south-1' });
 
 // Connect to the laptop’s WebSocket server
-const ws = new WebSocket('https://salty-jeans-clean.loca.lt');
+const ws = new WebSocket('https://loud-maps-help.loca.lt');
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
@@ -51,7 +51,7 @@ ws.on('message', (data) => {
   const response = JSON.parse(data);
 
   if (response.status === 'success') {
-    const s3Key = `${response.code}/${response.tracking_number}.json`;
+    const s3Key = `${response.code.toLowerCase()}/${response.trackingNumber.toLowerCase()}.json`;
     const params = {
       Bucket: 'testbucketaniket7876',
       Key: s3Key,
