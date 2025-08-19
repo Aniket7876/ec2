@@ -57,7 +57,7 @@ const WebSocket = require('ws');
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3({ region: 'ap-south-1' });
 
-const ws = new WebSocket('wss://photography-via-tiger-settled.trycloudflare.com');
+const ws = new WebSocket('wss://known-ride-trailer-wp.trycloudflare.com');
 
 const scrapingTasks = [
   { tracking_number: "SSESEA2504249893", type: 'mbl', code: 'UWLD' },
