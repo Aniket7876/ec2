@@ -69,8 +69,9 @@ const scrapingTasks = [
   // { tracking_number: "254866453", type: 'mbl', code: 'MAEU' },
   // { tracking_number: "254527448", type: 'mbl', code: 'MAEU' },
   // { tracking_number: "254198838", type: 'mbl', code: 'MAEU' },
-  {tracking_number: "GDY0384003", type: "mbl", code: "CMDU"},
-  {tracking_number: "GDY0385735", type: "mbl", code: "CMDU"}
+  // {tracking_number: "GDY0384003", type: "mbl", code: "CMDU"},
+  // {tracking_number: "GDY0385735", type: "mbl", code: "CMDU"},
+  {tracking_number: "ANT1901431", type: "mbl", code: "CMDU"},
 ];
 
 ws.on('open', () => {
