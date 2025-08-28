@@ -24,7 +24,10 @@ ws.on('open', () => {
   // {tracking_number: "GDY0385735", type: "mbl", code: "CMDU"},
   // {tracking_number: "ANT1901431", type: "mbl", code: "CMDU"},
   // {tracking_number: "GOSUIAU3037988", type: "mbl", code: "ZIMU"},
-  {tracking_number: "ZIMUSNH22125519", type: "mbl", code: "ZIMU"}
+  {tracking_number: "ZIMUSNH22125519", type: "mbl", code: "ZIMU"},
+  {tracking_number: "ZIMUSNH22125691", type: "mbl", code: "ZIMU"},
+  {tracking_number: "ZIMUSIN8154432", type: "mbl", code: "ZIMU"},
+  
   ];
 
   ws.send(JSON.stringify({
