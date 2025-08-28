@@ -5,7 +5,7 @@ const { type } = require('os');
 const s3 = new AWS.S3({ region: 'ap-south-1' });
 
 // Connect to the laptop’s WebSocket server
-const ws = new WebSocket('wss://freeze-purchasing-earth-champions.trycloudflare.com');
+const ws = new WebSocket('wss://feeds-mature-villages-prague.trycloudflare.com');
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
