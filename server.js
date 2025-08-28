@@ -5,7 +5,7 @@ const { type } = require('os');
 const s3 = new AWS.S3({ region: 'ap-south-1' });
 
 // Connect to the laptop’s WebSocket server
-const ws = new WebSocket('wss://bookstore-shut-noon-wizard.trycloudflare.com');
+const ws = new WebSocket('wss://violent-indicator-booking-activation.trycloudflare.com');
 
 ws.on('open', () => {
   console.log('Connected to local laptop’s browser');
@@ -25,7 +25,6 @@ ws.on('open', () => {
   // {tracking_number: "ANT1901431", type: "mbl", code: "CMDU"},
   // {tracking_number: "GOSUIAU3037988", type: "mbl", code: "ZIMU"},
   {tracking_number: "ZIMUSNH22125519", type: "mbl", code: "ZIMU"},
-  {tracking_number: "ZIMUSNH22125691", type: "mbl", code: "ZIMU"},
   {tracking_number: "ZIMUSIN8154432", type: "mbl", code: "ZIMU"},
   
   ];
