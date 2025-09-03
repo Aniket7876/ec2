@@ -19,8 +19,8 @@ app.get('/jobs', async (req, res) => {
 
   console.log(`Laptop connected (${workerId}), sending jobs`);
 
-  console.log("Waiting for 4 sec")
-  await new Promise(resolve => setTimeout(resolve, 4000));
+  console.log("Waiting for 10 sec")
+  await new Promise(resolve => setTimeout(resolve, 10000));
   
   setTimeout(() => {
     sendJobsToLaptop();
@@ -34,7 +34,7 @@ app.get('/jobs', async (req, res) => {
 
 // Move scrapingTasks to module level so it can be modified
 let scrapingTasks = [
-    { tracking_number: "SSESEA2504249893", type: 'mbl', code: 'UWLD' }, // Done
+    // { tracking_number: "SSESEA2504249893", type: 'mbl', code: 'UWLD' }, // Done
     // { tracking_number: "SSECLE2403203859", type: 'mbl', code: 'UWLD' }, // Done
     // { tracking_number: "254851590", type: 'mbl', code: 'MAEU' }, // Done
     // { tracking_number: "MRKU8203610", type: 'mbl', code: 'MAEU' }, // Failed
@@ -56,7 +56,7 @@ let scrapingTasks = [
     // { tracking_number: "ZIMUSIN8154785", type: "mbl", code: "ZIMU" }, // Done
     // { tracking_number: "ZIMUSNH22125519", type: "mbl", code: "ZIMU" }, // Done
     // { tracking_number: "ZIMUSNH22204594", type: "mbl", code: "ZIMU" }, // Done
-    // { tracking_number: "027F637762", type: "mbl", code: "22AA" },
+    { tracking_number: "027F637762", type: "mbl", code: "22AA" },
     // { tracking_number: "008FA02845", type: "mbl", code: "22AA"},
     // { tracking_number: "175F000389", type: "mbl", code: "22AA"},
     // { tracking_number: "008FX13961", type: "mbl", code: "22AA"}, // Over O/B date 120 days, data is not available.
