@@ -68,8 +68,8 @@ app.get('/jobs', (req, res) => {
     workerStatus.set(clientId, { status: 'idle', lastBatchSize: 0 });
 
     res.write('data: {"status": "connected"}\n\n');
-    console.log(`🔌 Laptop connected (${clientId})`);
-    console.log(`📊 Active workers: ${connectedWorkers.size}, Remaining tasks: ${scrapingTasks.length}`);
+    console.log(`Laptop connected (${clientId})`);
+    console.log(`Active workers: ${connectedWorkers.size}, Remaining tasks: ${scrapingTasks.length}`);
 
     // Immediately try to send a batch of jobs
     sendBatchToWorker(clientId);
@@ -77,15 +77,15 @@ app.get('/jobs', (req, res) => {
     req.on('close', () => {
         connectedWorkers.delete(clientId);
         workerStatus.delete(clientId);
-        console.log(`❌ Laptop disconnected (${clientId})`);
-        console.log(`📊 Active workers: ${connectedWorkers.size}`);
+        console.log(`Laptop disconnected (${clientId})`);
+        console.log(`Active workers: ${connectedWorkers.size}`);
     });
 });
 
 // POST endpoint for when workers complete their batch
 app.post('/batch-complete', (req, res) => {
     const { status, timestamp, clientId } = req.body;
-    console.log(`✅ Received batch completion notification: ${status} at ${timestamp} from client ${clientId}`);
+    console.log(`Received batch completion notification: ${status} at ${timestamp} from client ${clientId}`);
     
     res.status(200).json({ 
         success: true, 
@@ -98,7 +98,7 @@ app.post('/batch-complete', (req, res) => {
 function sendBatchToWorker(clientId) {
     const worker = connectedWorkers.get(clientId);
     if (!worker) {
-        console.log(`⚠️ Worker ${clientId} not found`);
+        console.log(`Worker ${clientId} not found`);
         return;
     }
 
@@ -109,33 +109,33 @@ function sendBatchToWorker(clientId) {
     }
 
     if (scrapingTasks.length === 0) {
-        console.log(`📭 No jobs available for ${clientId}`);
+        console.log(`No jobs available for ${clientId}`);
         // Don't send jobs_complete here - let the worker reconnect when ready
         return;
     }
 
     const batch = scrapingTasks.splice(0, Math.min(BATCH_SIZE, scrapingTasks.length));
-    console.log(`📦 Sending batch of ${batch.length} jobs to ${clientId}`);
+    console.log(`Sending batch of ${batch.length} jobs to ${clientId}`);
 
     // Send individual jobs (not batch markers since client expects individual jobs)
     batch.forEach((task, index) => {
         worker.write(`data: ${JSON.stringify(task)}\n\n`);
-        console.log(`  📋 ${index + 1}. Sent: ${task.tracking_number} (${task.code})`);
+        console.log(` ${index + 1}. Sent: ${task.tracking_number} (${task.code})`);
     });
 
     // Signal that all jobs for this batch have been sent
     worker.write('data: {"status": "jobs_complete"}\n\n');
-    console.log(`🎯 Batch complete signal sent to ${clientId}`);
+    console.log(`Batch complete signal sent to ${clientId}`);
     
     // Update worker info
     if (workerInfo) {
         workerInfo.lastBatchSize = batch.length;
     }
 
-    console.log(`📊 Remaining tasks in queue: ${scrapingTasks.length}`);
+    console.log(`Remaining tasks in queue: ${scrapingTasks.length}`);
     
     if (scrapingTasks.length === 0) {
-        console.log(`🎉 All tasks have been distributed! Queue is now empty.`);
+        console.log(`All tasks have been distributed! Queue is now empty.`);
     }
 }
 
@@ -154,5 +154,5 @@ app.get('/status', (req, res) => {
 
 const PORT = 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 EC2 SSE server running on port ${PORT}`);
+    console.log(`EC2 SSE server running on port ${PORT}`);
 });
