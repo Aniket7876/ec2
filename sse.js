@@ -7,32 +7,26 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const connectedWorkers = new Map();
-const BATCH_SIZE = 5;
+const LOW_PRIORITY_BATCH_SIZE = 5;
+const HIGH_PRIORITY_BATCH_SIZE = 20;
 
-let scrapingTasks = [
+let lowPriorityTasks = [
     { tracking_number: "WHI251000446", type: 'mbl', code: '12GE' },
     { tracking_number: "WHI251000518", type: 'mbl', code: '12GE' },
     { tracking_number: "WHI251000482", type: 'mbl', code: '12GE' },
     { tracking_number: "WHI251000416", type: 'mbl', code: '12GE' },
     { tracking_number: "202407162948", type: 'mbl', code: '12AT' },
     { tracking_number: "A16FA00801", type: 'mbl', code: '12AT' },
-    { tracking_number: "A92FX12150", type: 'mbl', code: '12AT' },
-    { tracking_number: "SSESEA2504249893", type: 'mbl', code: 'UWLD' }, // Done
+    { tracking_number: "A92FX12150", type: 'mbl', code: '12AT' }, // Done
     { tracking_number: "SSECLE2403203859", type: 'mbl', code: 'UWLD' }, // Done
-    { tracking_number: "14076330", type: 'bkc', code: 'HLCU' }, // Done
     { tracking_number: "HLCUBO12507BCTE1", type: 'mbl', code: 'HLCU' }, // Done
     { tracking_number: "HLCUBO12507BCTE1", type: 'mbl', code: 'HLCU' }, // Done
     { tracking_number: "SNLFNJJL001257", type: 'mbl', code: '12IH' }, // Done
-    { tracking_number: "SNLFSHJLE8A0361", type: 'mbl', code: "12IH" }, // Done
     { tracking_number: "SNLFSHJLE8A0386", type: 'mbl', code: "12IH" }, // Done
     { tracking_number: "254851590", type: 'mbl', code: 'MAEU' }, // Done
     { tracking_number: "MRKU8203610", type: 'mbl', code: 'MAEU' }, // Failed
-    { tracking_number: "253450396", type: 'mbl', code: 'MAEU' }, // Done
-    { tracking_number: "254866453", type: 'mbl', code: 'MAEU' }, // Done
     { tracking_number: "254527448", type: 'mbl', code: 'MAEU' }, // Done
     { tracking_number: "254198838", type: 'mbl', code: 'MAEU' }, // Done
-    { tracking_number: "GDY0384003", type: "mbl", code: "CMDU" }, // Done
-    { tracking_number: "GDY0385735", type: "mbl", code: "CMDU" }, // Done
     { tracking_number: "ANT1901431", type: "mbl", code: "CMDU" }, // Done
     { tracking_number: "AEL1900279", type: "mbl", code: "CMDU" }, // Done
     { tracking_number: "AEL1909899", type: "mbl", code: "CMDU" }, // Done
@@ -40,13 +34,25 @@ let scrapingTasks = [
     { tracking_number: "AEL1909944", type: "mbl", code: "CMDU" }, // Done
     { tracking_number: "AEL1915046", type: "mbl", code: "CMDU" }, // Done Check
     { tracking_number: "ZIMUSIN8154785", type: "mbl", code: "ZIMU" }, // Done
-    { tracking_number: "ZIMUSNH22125519", type: "mbl", code: "ZIMU" }, // Done
     { tracking_number: "ZIMUSNH22204594", type: "mbl", code: "ZIMU" }, // Done
-    { tracking_number: "027F637762", type: "mbl", code: "22AA" },
-    { tracking_number: "008FA02845", type: "mbl", code: "22AA"},
     { tracking_number: "175F000389", type: "mbl", code: "22AA"},
     { tracking_number: "008FX13961", type: "mbl", code: "22AA"}, // Over O/B date 120 days, data is not available.
     { tracking_number: "INAKV2570030", type: "mbl", code: "22AA"}, //  No Data
+];
+
+let highPriorityTasks = [
+    { tracking_number: "WHI251000446", type: 'mbl', code: '12GE' },
+    { tracking_number: "A16FA00801", type: 'mbl', code: '12AT' },
+    { tracking_number: "SSESEA2504249893", type: 'mbl', code: 'UWLD' },
+    { tracking_number: "14076330", type: 'bkc', code: 'HLCU' },
+    { tracking_number: "SNLFSHJLE8A0361", type: 'mbl', code: "12IH" },
+    { tracking_number: "253450396", type: 'mbl', code: 'MAEU' },
+    { tracking_number: "254866453", type: 'mbl', code: 'MAEU' },
+    { tracking_number: "GDY0384003", type: "mbl", code: "CMDU" },
+    { tracking_number: "GDY0385735", type: "mbl", code: "CMDU" },
+    { tracking_number: "ZIMUSNH22125519", type: "mbl", code: "ZIMU" },
+    { tracking_number: "027F637762", type: "mbl", code: "22AA" },
+    { tracking_number: "008FA02845", type: "mbl", code: "22AA"},
 ];
 
 // Track workers and their current status
@@ -69,7 +75,7 @@ app.get('/jobs', (req, res) => {
 
     res.write('data: {"status": "connected"}\n\n');
     console.log(`Laptop connected (${clientId})`);
-    console.log(`Active workers: ${connectedWorkers.size}, Remaining tasks: ${scrapingTasks.length}`);
+    console.log(`Active workers: ${connectedWorkers.size}, High Priority tasks: ${highPriorityTasks.length}, Low Priority tasks: ${lowPriorityTasks.length}`);
 
     // Immediately try to send a batch of jobs
     sendBatchToWorker(clientId);
@@ -90,7 +96,11 @@ app.post('/batch-complete', (req, res) => {
     res.status(200).json({ 
         success: true, 
         message: 'Batch completion acknowledged',
-        remainingTasks: scrapingTasks.length
+        remainingTasks: {
+            highPriority: highPriorityTasks.length,
+            lowPriority: lowPriorityTasks.length,
+            total: highPriorityTasks.length + lowPriorityTasks.length
+        }
     });
 });
 
@@ -108,19 +118,31 @@ function sendBatchToWorker(clientId) {
         workerInfo.status = 'processing';
     }
 
-    if (scrapingTasks.length === 0) {
+    // Check if both queues are empty
+    if (highPriorityTasks.length === 0 && lowPriorityTasks.length === 0) {
         console.log(`No jobs available for ${clientId}`);
         // Don't send jobs_complete here - let the worker reconnect when ready
         return;
     }
 
-    const batch = scrapingTasks.splice(0, Math.min(BATCH_SIZE, scrapingTasks.length));
-    console.log(`Sending batch of ${batch.length} jobs to ${clientId}`);
+    let batch = [];
+    let priorityType = '';
+
+    // Priority logic: Check high priority tasks first
+    if (highPriorityTasks.length > 0) {
+        batch = highPriorityTasks.splice(0, Math.min(HIGH_PRIORITY_BATCH_SIZE, highPriorityTasks.length));
+        priorityType = 'HIGH PRIORITY';
+        console.log(`Sending batch of ${batch.length} HIGH PRIORITY jobs to ${clientId}`);
+    } else if (lowPriorityTasks.length > 0) {
+        batch = lowPriorityTasks.splice(0, Math.min(LOW_PRIORITY_BATCH_SIZE, lowPriorityTasks.length));
+        priorityType = 'LOW PRIORITY';
+        console.log(`Sending batch of ${batch.length} LOW PRIORITY jobs to ${clientId}`);
+    }
 
     // Send individual jobs (not batch markers since client expects individual jobs)
     batch.forEach((task, index) => {
         worker.write(`data: ${JSON.stringify(task)}\n\n`);
-        console.log(` ${index + 1}. Sent: ${task.tracking_number} (${task.code})`);
+        console.log(` ${index + 1}. Sent: ${task.tracking_number} (${task.code}) - ${priorityType}`);
     });
 
     // Signal that all jobs for this batch have been sent
@@ -132,10 +154,10 @@ function sendBatchToWorker(clientId) {
         workerInfo.lastBatchSize = batch.length;
     }
 
-    console.log(`Remaining tasks in queue: ${scrapingTasks.length}`);
+    console.log(`Remaining tasks - High Priority: ${highPriorityTasks.length}, Low Priority: ${lowPriorityTasks.length}`);
     
-    if (scrapingTasks.length === 0) {
-        console.log(`All tasks have been distributed! Queue is now empty.`);
+    if (highPriorityTasks.length === 0 && lowPriorityTasks.length === 0) {
+        console.log(`All tasks have been distributed! Both queues are now empty.`);
     }
 }
 
@@ -143,7 +165,11 @@ function sendBatchToWorker(clientId) {
 app.get('/status', (req, res) => {
     res.json({
         activeWorkers: connectedWorkers.size,
-        remainingTasks: scrapingTasks.length,
+        remainingTasks: {
+            highPriority: highPriorityTasks.length,
+            lowPriority: lowPriorityTasks.length,
+            total: highPriorityTasks.length + lowPriorityTasks.length
+        },
         workers: Array.from(workerStatus.entries()).map(([id, info]) => ({
             id: id,
             status: info.status,
