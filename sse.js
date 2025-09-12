@@ -7,40 +7,46 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const connectedWorkers = new Map();
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 5;
 
 let scrapingTasks = [
-    // {tracking_number: "202407162948", type: 'mbl', code: '12AT'},
-    // {tracking_number: "A16FA00801", type: 'mbl', code: '12AT'},
-    // {tracking_number: "A92FX12150", type: 'mbl', code: '12AT'},
-    // { tracking_number: "SSESEA2504249893", type: 'mbl', code: 'UWLD' }, // Done
-    // { tracking_number: "SSECLE2403203859", type: 'mbl', code: 'UWLD' }, // Done
-    { tracking_number: "HLCUNG12508RJVR1", type: 'mbl', code: 'HLCU' }, // Done
-    // { tracking_number: "254851590", type: 'mbl', code: 'MAEU' }, // Done
-    // { tracking_number: "MRKU8203610", type: 'mbl', code: 'MAEU' }, // Failed
-    // { tracking_number: "SNLFNJJL001257", type: 'mbl', code: '12IH' }, // Done
-    // { tracking_number: "SNLFSHJLE8A0361", type: 'mbl', code: "12IH" }, // Done
-    // { tracking_number: "SNLFSHJLE8A0386", type: 'mbl', code: "12IH" }, // Done
-    // { tracking_number: "253450396", type: 'mbl', code: 'MAEU' }, // Done
-    // { tracking_number: "254866453", type: 'mbl', code: 'MAEU' }, // Done
-    // { tracking_number: "254527448", type: 'mbl', code: 'MAEU' }, // Done
-    // { tracking_number: "254198838", type: 'mbl', code: 'MAEU' }, // Done
-    // { tracking_number: "GDY0384003", type: "mbl", code: "CMDU" }, // Done
-    // { tracking_number: "GDY0385735", type: "mbl", code: "CMDU" }, // Done
-    // { tracking_number: "ANT1901431", type: "mbl", code: "CMDU" }, // Done
-    // { tracking_number: "AEL1900279", type: "mbl", code: "CMDU" }, // Done
-    // { tracking_number: "AEL1909899", type: "mbl", code: "CMDU" }, // Done
-    // { tracking_number: "AEL1912008", type: "mbl", code: "CMDU" }, // Done
-    // { tracking_number: "AEL1909944", type: "mbl", code: "CMDU" }, // Done
-    // { tracking_number: "AEL1915046", type: "mbl", code: "CMDU" }, // Done Check
-    // { tracking_number: "ZIMUSIN8154785", type: "mbl", code: "ZIMU" }, // Done
-    // { tracking_number: "ZIMUSNH22125519", type: "mbl", code: "ZIMU" }, // Done
-    // { tracking_number: "ZIMUSNH22204594", type: "mbl", code: "ZIMU" }, // Done
-    // { tracking_number: "027F637762", type: "mbl", code: "22AA" },
-    // { tracking_number: "008FA02845", type: "mbl", code: "22AA"},
-    // { tracking_number: "175F000389", type: "mbl", code: "22AA"},
-    // { tracking_number: "008FX13961", type: "mbl", code: "22AA"}, // Over O/B date 120 days, data is not available.
-    // { tracking_number: "INAKV2570030", type: "mbl", code: "22AA"}, //  No Data
+    { tracking_number: "WHI251000446", type: 'mbl', code: '12GE' },
+    { tracking_number: "WHI251000518", type: 'mbl', code: '12GE' },
+    { tracking_number: "WHI251000482", type: 'mbl', code: '12GE' },
+    { tracking_number: "WHI251000416", type: 'mbl', code: '12GE' },
+    { tracking_number: "202407162948", type: 'mbl', code: '12AT' },
+    { tracking_number: "A16FA00801", type: 'mbl', code: '12AT' },
+    { tracking_number: "A92FX12150", type: 'mbl', code: '12AT' },
+    { tracking_number: "SSESEA2504249893", type: 'mbl', code: 'UWLD' }, // Done
+    { tracking_number: "SSECLE2403203859", type: 'mbl', code: 'UWLD' }, // Done
+    { tracking_number: "14076330", type: 'bkc', code: 'HLCU' }, // Done
+    { tracking_number: "HLCUBO12507BCTE1", type: 'mbl', code: 'HLCU' }, // Done
+    { tracking_number: "HLCUBO12507BCTE1", type: 'mbl', code: 'HLCU' }, // Done
+    { tracking_number: "SNLFNJJL001257", type: 'mbl', code: '12IH' }, // Done
+    { tracking_number: "SNLFSHJLE8A0361", type: 'mbl', code: "12IH" }, // Done
+    { tracking_number: "SNLFSHJLE8A0386", type: 'mbl', code: "12IH" }, // Done
+    { tracking_number: "254851590", type: 'mbl', code: 'MAEU' }, // Done
+    { tracking_number: "MRKU8203610", type: 'mbl', code: 'MAEU' }, // Failed
+    { tracking_number: "253450396", type: 'mbl', code: 'MAEU' }, // Done
+    { tracking_number: "254866453", type: 'mbl', code: 'MAEU' }, // Done
+    { tracking_number: "254527448", type: 'mbl', code: 'MAEU' }, // Done
+    { tracking_number: "254198838", type: 'mbl', code: 'MAEU' }, // Done
+    { tracking_number: "GDY0384003", type: "mbl", code: "CMDU" }, // Done
+    { tracking_number: "GDY0385735", type: "mbl", code: "CMDU" }, // Done
+    { tracking_number: "ANT1901431", type: "mbl", code: "CMDU" }, // Done
+    { tracking_number: "AEL1900279", type: "mbl", code: "CMDU" }, // Done
+    { tracking_number: "AEL1909899", type: "mbl", code: "CMDU" }, // Done
+    { tracking_number: "AEL1912008", type: "mbl", code: "CMDU" }, // Done
+    { tracking_number: "AEL1909944", type: "mbl", code: "CMDU" }, // Done
+    { tracking_number: "AEL1915046", type: "mbl", code: "CMDU" }, // Done Check
+    { tracking_number: "ZIMUSIN8154785", type: "mbl", code: "ZIMU" }, // Done
+    { tracking_number: "ZIMUSNH22125519", type: "mbl", code: "ZIMU" }, // Done
+    { tracking_number: "ZIMUSNH22204594", type: "mbl", code: "ZIMU" }, // Done
+    { tracking_number: "027F637762", type: "mbl", code: "22AA" },
+    { tracking_number: "008FA02845", type: "mbl", code: "22AA"},
+    { tracking_number: "175F000389", type: "mbl", code: "22AA"},
+    { tracking_number: "008FX13961", type: "mbl", code: "22AA"}, // Over O/B date 120 days, data is not available.
+    { tracking_number: "INAKV2570030", type: "mbl", code: "22AA"}, //  No Data
 ];
 
 // Track workers and their current status
