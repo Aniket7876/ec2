@@ -104,6 +104,42 @@ app.post('/batch-complete', (req, res) => {
     });
 });
 
+app.post("/add-task-high", (req, res) => {
+  const { tracking_number, type, code } = req.body;
+
+  const newTask = {
+    tracking_number,
+    type,
+    code,
+  };
+
+  highPriorityTasks.push(newTask);
+
+  res.status(201).json({
+    message: "Task added successfully",
+    task: newTask,
+  });
+});
+
+app.post("/add-task-low", (req, res) => {
+  const { tracking_number, type, code } = req.body;
+
+  const newTask = {
+    tracking_number,
+    type,
+    code,
+  };
+
+  lowPriorityTasks.push(newTask);
+  console.log("New Task added");
+  console.log(lowPriorityTasks);
+
+  res.status(201).json({
+    message: "Task added successfully",
+    task: newTask,
+  });
+});
+
 // Function to send a batch of jobs to a single worker
 function sendBatchToWorker(clientId) {
     const worker = connectedWorkers.get(clientId);
