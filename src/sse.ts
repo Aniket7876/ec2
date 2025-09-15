@@ -1,16 +1,27 @@
-// ec2-sse-server.js
-const express = require('express');
+// ec2-sse-server.ts
+import express, { Request, Response } from 'express';
+import { 
+  Task, 
+  WorkerStatus, 
+  BatchCompletionRequest, 
+  TaskAdditionRequest, 
+  TaskAdditionResponse, 
+  BatchCompletionResponse, 
+  StatusResponse,
+  SSEEvent
+} from './interfaces';
+
 const app = express();
 
 // Middleware for parsing JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const connectedWorkers = new Map();
+const connectedWorkers = new Map<string, Response>();
 const LOW_PRIORITY_BATCH_SIZE = 5;
 const HIGH_PRIORITY_BATCH_SIZE = 20;
 
-let lowPriorityTasks = [
+let lowPriorityTasks: Task[] = [
     { tracking_number: "WHI251000446", type: 'mbl', code: '12GE' },
     { tracking_number: "WHI251000518", type: 'mbl', code: '12GE' },
     { tracking_number: "WHI251000482", type: 'mbl', code: '12GE' },
@@ -40,7 +51,7 @@ let lowPriorityTasks = [
     { tracking_number: "INAKV2570030", type: "mbl", code: "22AA"}, //  No Data
 ];
 
-let highPriorityTasks = [
+let highPriorityTasks: Task[] = [
     { tracking_number: "WHI251000446", type: 'mbl', code: '12GE' },
     { tracking_number: "A16FA00801", type: 'mbl', code: '12AT' },
     { tracking_number: "SSESEA2504249893", type: 'mbl', code: 'UWLD' },
@@ -56,14 +67,14 @@ let highPriorityTasks = [
 ];
 
 // Track workers and their current status
-const workerStatus = new Map(); // clientId -> { status: 'idle'|'processing', lastBatchSize: number }
+const workerStatus = new Map<string, WorkerStatus>(); // clientId -> { status: 'idle'|'processing', lastBatchSize: number }
 
 // Function to find idle workers and send them tasks
-function distributeTasksToIdleWorkers() {
+function distributeTasksToIdleWorkers(): void {
     console.log(`Checking for idle workers to distribute tasks...`);
     
     // Find all idle workers
-    const idleWorkers = [];
+    const idleWorkers: string[] = [];
     for (const [clientId, status] of workerStatus.entries()) {
         if (status.status === 'idle' && connectedWorkers.has(clientId)) {
             idleWorkers.push(clientId);
@@ -79,7 +90,7 @@ function distributeTasksToIdleWorkers() {
 }
 
 // SSE endpoint - laptops connect here to receive jobs
-app.get('/jobs', (req, res) => {
+app.get('/jobs', (req: Request, res: Response) => {
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
@@ -89,7 +100,7 @@ app.get('/jobs', (req, res) => {
     });
 
     
-    const { clientId } = req.query;
+    const { clientId } = req.query as { clientId: string };
     connectedWorkers.set(clientId, res);
     workerStatus.set(clientId, { status: 'idle', lastBatchSize: 0 });
 
@@ -109,7 +120,7 @@ app.get('/jobs', (req, res) => {
 });
 
 // POST endpoint for when workers complete their batch
-app.post('/batch-complete', (req, res) => {
+app.post('/batch-complete', (req: Request<{}, BatchCompletionResponse, BatchCompletionRequest>, res: Response<BatchCompletionResponse>) => {
     const { status, timestamp, clientId } = req.body;
     console.log(`Received batch completion notification: ${status} at ${timestamp} from client ${clientId}`);
     
@@ -119,15 +130,17 @@ app.post('/batch-complete', (req, res) => {
         workerInfo.status = 'idle';
     }
     
-    res.status(200).json({ 
-        success: true, 
+    const response: BatchCompletionResponse = {
+        success: true,
         message: 'Batch completion acknowledged',
         remainingTasks: {
             highPriority: highPriorityTasks.length,
             lowPriority: lowPriorityTasks.length,
             total: highPriorityTasks.length + lowPriorityTasks.length
         }
-    });
+    };
+
+    res.status(200).json(response);
 
     // After marking worker as idle, try to send more tasks
     setTimeout(() => {
@@ -135,10 +148,10 @@ app.post('/batch-complete', (req, res) => {
     }, 100); // Small delay to ensure status update is processed
 });
 
-app.post("/add-task-high", (req, res) => {
+app.post("/add-task-high", (req: Request<{}, TaskAdditionResponse, TaskAdditionRequest>, res: Response<TaskAdditionResponse>) => {
     const { tracking_number, type, code } = req.body;
 
-    const newTask = {
+    const newTask: Task = {
         tracking_number,
         type,
         code,
@@ -151,7 +164,7 @@ app.post("/add-task-high", (req, res) => {
     // Immediately try to distribute the new task to idle workers
     distributeTasksToIdleWorkers();
 
-    res.status(201).json({
+    const response: TaskAdditionResponse = {
         message: "High priority task added successfully",
         task: newTask,
         remainingTasks: {
@@ -159,13 +172,15 @@ app.post("/add-task-high", (req, res) => {
             lowPriority: lowPriorityTasks.length,
             total: highPriorityTasks.length + lowPriorityTasks.length
         }
-    });
+    };
+
+    res.status(201).json(response);
 });
 
-app.post("/add-task-low", (req, res) => {
+app.post("/add-task-low", (req: Request<{}, TaskAdditionResponse, TaskAdditionRequest>, res: Response<TaskAdditionResponse>) => {
     const { tracking_number, type, code } = req.body;
 
-    const newTask = {
+    const newTask: Task = {
         tracking_number,
         type,
         code,
@@ -178,7 +193,7 @@ app.post("/add-task-low", (req, res) => {
     // Immediately try to distribute the new task to idle workers
     distributeTasksToIdleWorkers();
 
-    res.status(201).json({
+    const response: TaskAdditionResponse = {
         message: "Low priority task added successfully",
         task: newTask,
         remainingTasks: {
@@ -186,11 +201,13 @@ app.post("/add-task-low", (req, res) => {
             lowPriority: lowPriorityTasks.length,
             total: highPriorityTasks.length + lowPriorityTasks.length
         }
-    });
+    };
+
+    res.status(201).json(response);
 });
 
 // Function to send a batch of jobs to a single worker
-function sendBatchToWorker(clientId) {
+function sendBatchToWorker(clientId: string): number {
     const worker = connectedWorkers.get(clientId);
     if (!worker) {
         console.log(`Worker ${clientId} not found`);
@@ -215,7 +232,7 @@ function sendBatchToWorker(clientId) {
         workerInfo.status = 'processing';
     }
 
-    let batch = [];
+    let batch: Task[] = [];
     let priorityType = '';
 
     // Priority logic: Check high priority tasks first
@@ -259,8 +276,8 @@ function sendBatchToWorker(clientId) {
 }
 
 // Endpoint to check server status
-app.get('/status', (req, res) => {
-    res.json({
+app.get('/status', (req: Request, res: Response<StatusResponse>) => {
+    const response: StatusResponse = {
         activeWorkers: connectedWorkers.size,
         remainingTasks: {
             highPriority: highPriorityTasks.length,
@@ -272,7 +289,9 @@ app.get('/status', (req, res) => {
             status: info.status,
             lastBatchSize: info.lastBatchSize
         }))
-    });
+    };
+
+    res.json(response);
 });
 
 const PORT = 3000;
