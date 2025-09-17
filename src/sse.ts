@@ -3,12 +3,9 @@ import express, { Request, Response } from 'express';
 import { 
   Task, 
   WorkerStatus, 
-  BatchCompletionRequest, 
   TaskAdditionRequest, 
   TaskAdditionResponse, 
-  BatchCompletionResponse, 
   StatusResponse,
-  SSEEvent
 } from './interfaces';
 
 const app = express();
@@ -21,71 +18,66 @@ const connectedWorkers = new Map<string, Response>();
 const LOW_PRIORITY_BATCH_SIZE = 5;
 const HIGH_PRIORITY_BATCH_SIZE = 20;
 
-let lowPriorityTasks: Task[] = [
-    { tracking_number: "WHI251000446", type: 'mbl', code: '12GE' },
-    { tracking_number: "WHI251000518", type: 'mbl', code: '12GE' },
-    { tracking_number: "WHI251000482", type: 'mbl', code: '12GE' },
-    { tracking_number: "WHI251000416", type: 'mbl', code: '12GE' },
-    { tracking_number: "202407162948", type: 'mbl', code: '12AT' },
-    { tracking_number: "A16FA00801", type: 'mbl', code: '12AT' },
-    { tracking_number: "A92FX12150", type: 'mbl', code: '12AT' }, // Done
-    { tracking_number: "SSECLE2403203859", type: 'mbl', code: 'UWLD' }, // Done
-    { tracking_number: "HLCUBO12507BCTE1", type: 'mbl', code: 'HLCU' }, // Done
-    { tracking_number: "HLCUBO12507BCTE1", type: 'mbl', code: 'HLCU' }, // Done
-    { tracking_number: "SNLFNJJL001257", type: 'mbl', code: '12IH' }, // Done
-    { tracking_number: "SNLFSHJLE8A0386", type: 'mbl', code: "12IH" }, // Done
-    { tracking_number: "254851590", type: 'mbl', code: 'MAEU' }, // Done
-    { tracking_number: "MRKU8203610", type: 'mbl', code: 'MAEU' }, // Failed
-    { tracking_number: "254527448", type: 'mbl', code: 'MAEU' }, // Done
-    { tracking_number: "254198838", type: 'mbl', code: 'MAEU' }, // Done
-    { tracking_number: "ANT1901431", type: "mbl", code: "CMDU" }, // Done
-    { tracking_number: "AEL1900279", type: "mbl", code: "CMDU" }, // Done
-    { tracking_number: "AEL1909899", type: "mbl", code: "CMDU" }, // Done
-    { tracking_number: "AEL1912008", type: "mbl", code: "CMDU" }, // Done
-    { tracking_number: "AEL1909944", type: "mbl", code: "CMDU" }, // Done
-    { tracking_number: "AEL1915046", type: "mbl", code: "CMDU" }, // Done Check
-    { tracking_number: "ZIMUSIN8154785", type: "mbl", code: "ZIMU" }, // Done
-    { tracking_number: "ZIMUSNH22204594", type: "mbl", code: "ZIMU" }, // Done
-    { tracking_number: "175F000389", type: "mbl", code: "22AA"},
-    { tracking_number: "008FX13961", type: "mbl", code: "22AA"}, // Over O/B date 120 days, data is not available.
-    { tracking_number: "INAKV2570030", type: "mbl", code: "22AA"}, //  No Data
-];
+let lowPriorityTasks: Task[] = [];
 
-let highPriorityTasks: Task[] = [
-    { tracking_number: "WHI251000446", type: 'mbl', code: '12GE' },
-    { tracking_number: "A16FA00801", type: 'mbl', code: '12AT' },
-    { tracking_number: "SSESEA2504249893", type: 'mbl', code: 'UWLD' },
-    { tracking_number: "14076330", type: 'bkc', code: 'HLCU' },
-    { tracking_number: "SNLFSHJLE8A0361", type: 'mbl', code: "12IH" },
-    { tracking_number: "253450396", type: 'mbl', code: 'MAEU' },
-    { tracking_number: "254866453", type: 'mbl', code: 'MAEU' },
-    { tracking_number: "GDY0384003", type: "mbl", code: "CMDU" },
-    { tracking_number: "GDY0385735", type: "mbl", code: "CMDU" },
-    { tracking_number: "ZIMUSNH22125519", type: "mbl", code: "ZIMU" },
-    { tracking_number: "027F637762", type: "mbl", code: "22AA" },
-    { tracking_number: "008FA02845", type: "mbl", code: "22AA"},
-];
+let highPriorityTasks: Task[] = [];
 
 // Track workers and their current status
-const workerStatus = new Map<string, WorkerStatus>(); // clientId -> { status: 'idle'|'processing', lastBatchSize: number }
+const workerStatus = new Map<string, WorkerStatus>(); // clientId -> { status: 'idle'|'processing'|'waiting', lastBatchSize: number, queuePosition?, joinedAt: number }
+const workerQueue: string[] = []; // FIFO queue of workers waiting for jobs
 
-// Function to find idle workers and send them tasks
-function distributeTasksToIdleWorkers(): void {
-    console.log(`Checking for idle workers to distribute tasks...`);
+// Function to add worker to queue
+function addWorkerToQueue(clientId: string): void {
+    if (!workerQueue.includes(clientId) && connectedWorkers.has(clientId)) {
+        workerQueue.push(clientId);
+        const workerInfo = workerStatus.get(clientId);
+        if (workerInfo) {
+            workerInfo.status = 'waiting';
+            workerInfo.queuePosition = workerQueue.length;
+            workerInfo.joinedAt = Date.now();
+        }
+        console.log(`Worker ${clientId} added to queue at position ${workerQueue.length}`);
+    }
+}
+
+// Function to distribute tasks to workers in queue order
+function distributeTasksToQueuedWorkers(): void {
+    console.log(`Checking for workers in queue to distribute tasks...`);
+    console.log(`Queue length: ${workerQueue.length}, High Priority: ${highPriorityTasks.length}, Low Priority: ${lowPriorityTasks.length}`);
     
-    // Find all idle workers
-    const idleWorkers: string[] = [];
-    for (const [clientId, status] of workerStatus.entries()) {
-        if (status.status === 'idle' && connectedWorkers.has(clientId)) {
-            idleWorkers.push(clientId);
+    // Check if there are any tasks available
+    if (highPriorityTasks.length === 0 && lowPriorityTasks.length === 0) {
+        console.log(`No tasks available, keeping ${workerQueue.length} workers in queue`);
+        return;
+    }
+    
+    // Process workers in queue order (FIFO) - continue until no more tasks or workers
+    while (workerQueue.length > 0 && (highPriorityTasks.length > 0 || lowPriorityTasks.length > 0)) {
+        const clientId = workerQueue.shift()!; // Remove first worker from queue
+        
+        // Check if worker is still connected
+        if (!connectedWorkers.has(clientId)) {
+            console.log(`Worker ${clientId} no longer connected, removing from queue`);
+            continue;
+        }
+        
+        // Send tasks to this worker
+        const tasksSent = sendBatchToWorker(clientId);
+        if (tasksSent > 0) {
+            console.log(`Sent ${tasksSent} tasks to worker ${clientId}`);
+        } else {
+            // If no tasks were sent, put worker back in queue and break
+            workerQueue.unshift(clientId);
+            break;
         }
     }
     
-    console.log(`Found ${idleWorkers.length} idle workers`);
-    
-    // Send tasks to idle workers
-    idleWorkers.forEach(clientId => {
-        sendBatchToWorker(clientId);
+    // Update queue positions for remaining workers
+    workerQueue.forEach((clientId, index) => {
+        const workerInfo = workerStatus.get(clientId);
+        if (workerInfo) {
+            workerInfo.queuePosition = index + 1;
+        }
     });
 }
 
@@ -102,71 +94,72 @@ app.get('/jobs', (req: Request, res: Response) => {
     
     const { clientId } = req.query as { clientId: string };
     connectedWorkers.set(clientId, res);
-    workerStatus.set(clientId, { status: 'idle', lastBatchSize: 0 });
+    workerStatus.set(clientId, { 
+        status: 'waiting', 
+        lastBatchSize: 0, 
+        queuePosition: 0,
+        joinedAt: Date.now()
+    });
 
     res.write('data: {"status": "connected"}\n\n');
     console.log(`Laptop connected (${clientId})`);
     console.log(`Active workers: ${connectedWorkers.size}, High Priority tasks: ${highPriorityTasks.length}, Low Priority tasks: ${lowPriorityTasks.length}`);
 
-    // Immediately try to send a batch of jobs
-    sendBatchToWorker(clientId);
+    // Add worker to queue and try to distribute tasks
+    addWorkerToQueue(clientId);
+    distributeTasksToQueuedWorkers();
 
     req.on('close', () => {
         connectedWorkers.delete(clientId);
         workerStatus.delete(clientId);
+        
+        // Remove from queue if present
+        const queueIndex = workerQueue.indexOf(clientId);
+        if (queueIndex !== -1) {
+            workerQueue.splice(queueIndex, 1);
+            console.log(`Worker ${clientId} removed from queue`);
+        }
+        
         console.log(`Laptop disconnected (${clientId})`);
-        console.log(`Active workers: ${connectedWorkers.size}`);
+        console.log(`Active workers: ${connectedWorkers.size}, Queue length: ${workerQueue.length}`);
     });
 });
 
-// POST endpoint for when workers complete their batch
-app.post('/batch-complete', (req: Request<{}, BatchCompletionResponse, BatchCompletionRequest>, res: Response<BatchCompletionResponse>) => {
-    const { status, timestamp, clientId } = req.body;
-    console.log(`Received batch completion notification: ${status} at ${timestamp} from client ${clientId}`);
-    
-    // Mark worker as idle
-    const workerInfo = workerStatus.get(clientId);
-    if (workerInfo) {
-        workerInfo.status = 'idle';
-    }
-    
-    const response: BatchCompletionResponse = {
-        success: true,
-        message: 'Batch completion acknowledged',
-        remainingTasks: {
-            highPriority: highPriorityTasks.length,
-            lowPriority: lowPriorityTasks.length,
-            total: highPriorityTasks.length + lowPriorityTasks.length
-        }
-    };
-
-    res.status(200).json(response);
-
-    // After marking worker as idle, try to send more tasks
-    setTimeout(() => {
-        sendBatchToWorker(clientId);
-    }, 100); // Small delay to ensure status update is processed
-});
-
 app.post("/add-task-high", (req: Request<{}, TaskAdditionResponse, TaskAdditionRequest>, res: Response<TaskAdditionResponse>) => {
-    const { tracking_number, type, code } = req.body;
+    const { tasks } = req.body;
 
-    const newTask: Task = {
-        tracking_number,
-        type,
-        code,
-    };
+    // Validate that tasks array exists and is not empty
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+        return res.status(400).json({
+            message: "Tasks array is required and cannot be empty",
+            tasks: [],
+            remainingTasks: {
+                highPriority: highPriorityTasks.length,
+                lowPriority: lowPriorityTasks.length,
+                total: highPriorityTasks.length + lowPriorityTasks.length
+            }
+        });
+    }
 
-    highPriorityTasks.push(newTask);
-    console.log("New HIGH PRIORITY task added");
+    // Create new tasks from the request
+    const newTasks: Task[] = tasks.map(taskData => ({
+        tracking_number: taskData.tracking_number,
+        type: taskData.type,
+        code: taskData.code,
+    }));
+
+    // Add all new tasks to the high priority queue
+    highPriorityTasks.push(...newTasks);
+    
+    console.log(`${newTasks.length} new HIGH PRIORITY tasks added`);
     console.log(`High Priority tasks: ${highPriorityTasks.length}, Low Priority tasks: ${lowPriorityTasks.length}`);
 
-    // Immediately try to distribute the new task to idle workers
-    distributeTasksToIdleWorkers();
+    // Immediately try to distribute the new tasks to queued workers
+    distributeTasksToQueuedWorkers();
 
     const response: TaskAdditionResponse = {
-        message: "High priority task added successfully",
-        task: newTask,
+        message: `${newTasks.length} high priority tasks added successfully`,
+        tasks: newTasks,
         remainingTasks: {
             highPriority: highPriorityTasks.length,
             lowPriority: lowPriorityTasks.length,
@@ -178,24 +171,38 @@ app.post("/add-task-high", (req: Request<{}, TaskAdditionResponse, TaskAdditionR
 });
 
 app.post("/add-task-low", (req: Request<{}, TaskAdditionResponse, TaskAdditionRequest>, res: Response<TaskAdditionResponse>) => {
-    const { tracking_number, type, code } = req.body;
+    const { tasks } = req.body;
 
-    const newTask: Task = {
-        tracking_number,
-        type,
-        code,
-    };
+    // Validate that tasks array exists and is not empty
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+        return res.status(400).json({
+            message: "Tasks array is required and cannot be empty",
+            tasks: [],
+            remainingTasks: {
+                highPriority: highPriorityTasks.length,
+                lowPriority: lowPriorityTasks.length,
+                total: highPriorityTasks.length + lowPriorityTasks.length
+            }
+        });
+    }
 
-    lowPriorityTasks.push(newTask);
+    // Create new tasks from the request
+    const newTasks: Task[] = tasks.map(taskData => ({
+        tracking_number: taskData.tracking_number,
+        type: taskData.type,
+        code: taskData.code,
+    }));
+
+    lowPriorityTasks.push(...newTasks);
     console.log("New LOW PRIORITY task added");
     console.log(`High Priority tasks: ${highPriorityTasks.length}, Low Priority tasks: ${lowPriorityTasks.length}`);
 
-    // Immediately try to distribute the new task to idle workers
-    distributeTasksToIdleWorkers();
+    // Immediately try to distribute the new task to queued workers
+    distributeTasksToQueuedWorkers();
 
     const response: TaskAdditionResponse = {
         message: "Low priority task added successfully",
-        task: newTask,
+        tasks: newTasks,
         remainingTasks: {
             highPriority: highPriorityTasks.length,
             lowPriority: lowPriorityTasks.length,
@@ -214,20 +221,14 @@ function sendBatchToWorker(clientId: string): number {
         return 0;
     }
 
-    // Check worker status - don't send if already processing
-    const workerInfo = workerStatus.get(clientId);
-    if (workerInfo && workerInfo.status === 'processing') {
-        console.log(`Worker ${clientId} is already processing, skipping`);
-        return 0;
-    }
-
     // Check if both queues are empty
     if (highPriorityTasks.length === 0 && lowPriorityTasks.length === 0) {
         console.log(`No jobs available for ${clientId}`);
         return 0;
     }
 
-    // Update worker status
+    // Update worker status to processing
+    const workerInfo = workerStatus.get(clientId);
     if (workerInfo) {
         workerInfo.status = 'processing';
     }
@@ -272,6 +273,9 @@ function sendBatchToWorker(clientId: string): number {
         console.log(`All tasks have been distributed! Both queues are now empty.`);
     }
 
+    // Note: Worker will disconnect after receiving jobs, so no need to manage their status further
+    console.log(`Worker ${clientId} will disconnect after processing jobs`);
+
     return batch.length; // Return number of tasks sent
 }
 
@@ -287,7 +291,9 @@ app.get('/status', (req: Request, res: Response<StatusResponse>) => {
         workers: Array.from(workerStatus.entries()).map(([id, info]) => ({
             id: id,
             status: info.status,
-            lastBatchSize: info.lastBatchSize
+            lastBatchSize: info.lastBatchSize,
+            queuePosition: info.queuePosition,
+            joinedAt: info.joinedAt
         }))
     };
 
