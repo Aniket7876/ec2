@@ -1,50 +1,37 @@
 // Task interface for tracking jobs
 export interface Task {
   tracking_number: string;
-  type: 'mbl' | 'bkc';
+  type: string;
   code: string;
 }
 
 // Worker status interface
 export interface WorkerStatus {
-  status: 'idle' | 'processing';
+  status: 'idle' | 'processing' | 'waiting';
   lastBatchSize: number;
-}
-
-// Batch completion request interface
-export interface BatchCompletionRequest {
-  status: string;
-  timestamp: string;
-  clientId: string;
+  queuePosition?: number;
+  joinedAt: number;
 }
 
 // Task addition request interface
 export interface TaskAdditionRequest {
-  tracking_number: string;
-  type: 'mbl' | 'bkc';
-  code: string;
+    tasks: Array<{
+        tracking_number: string;
+        type: string;
+        code: string;
+    }>;
 }
-
 // Response interfaces
 export interface TaskAdditionResponse {
-  message: string;
-  task: Task;
-  remainingTasks: {
-    highPriority: number;
-    lowPriority: number;
-    total: number;
-  };
+    message: string;
+    tasks: Task[];
+    remainingTasks: {
+        highPriority: number;
+        lowPriority: number;
+        total: number;
+    };
 }
 
-export interface BatchCompletionResponse {
-  success: boolean;
-  message: string;
-  remainingTasks: {
-    highPriority: number;
-    lowPriority: number;
-    total: number;
-  };
-}
 
 export interface StatusResponse {
   activeWorkers: number;
@@ -55,8 +42,10 @@ export interface StatusResponse {
   };
   workers: Array<{
     id: string;
-    status: 'idle' | 'processing';
+    status: 'idle' | 'processing' | 'waiting';
     lastBatchSize: number;
+    queuePosition?: number;
+    joinedAt: number;
   }>;
 }
 
